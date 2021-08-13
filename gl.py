@@ -2,19 +2,6 @@ import struct
 import random
 from obj import Obj
 from collections import namedtuple
-"""
-Bryann Alfaro 19372
-LABORATORIO 1 - GRAFICAS POR COMPUTADORA
-Polígono 1: 30 puntos
-
-Polígono 2: 10 puntos
-
-Polígono 3: 10 puntos
-
-Polígono 4: 50 puntos
-
-Polígono 5: 30 puntos
-"""
 
 V2 = namedtuple("Point2D",['x','y'])
 V3 = namedtuple("Point3D",['x','y','z'])
@@ -66,7 +53,7 @@ class Renderer(object):
     def __init__(self):
         self.default_color = color(0,0,139)
         self.cl_color = BLACK
-        self.light = norm(V3(2,3,1))
+        self.light = norm(V3(0,0,1))
 
     def point(self, x, y):
         self.framebuffer[y][x] =self.default_color
@@ -93,12 +80,7 @@ class Renderer(object):
             [self.cl_color for x in range(self.width)] for y in range(self.height)
             ]
         self.zbuffer = [
-            [-99999 for x in range(self.width)] for y in range(self.height)
-            ]
-
-    def glBuffer(self):
-        self.zbuffer = [
-            [-99999 for x in range(self.width)] for y in range(self.height)
+            [-float('inf') for x in range(self.width)] for y in range(self.height)
             ]
 
     def frame(self):
@@ -184,9 +166,10 @@ class Renderer(object):
             round(((v[1]+translate[1])*scale[1])),
             round(((v[2]+translate[2])*scale[2]))
         )
+
     def load(self, filename, movement, scale):
         model = Obj(filename)
-        for face in model.faces:
+        for face in (model.faces):
             vcount  = len(face)
 
             if vcount == 3:
@@ -289,20 +272,14 @@ class Renderer(object):
         self.line(B,C)
         self.line(C,A)
 
-
-
-
     def barycentric(self,A,B,C,P):
         cx,cy,cz = cross(V3(B.x-A.x,C.x-A.x,A.x-P.x),V3(B.y-A.y,C.y-A.y,A.y-P.y))
-
-
         if cz ==0:
             return -1,-1,-1
 
         u = cx/cz
         v = cy/cz
         w = 1-(cx+cy)/cz
-
 
         return w,v,u
 
@@ -312,16 +289,6 @@ class Renderer(object):
         ys = [A.y, B.y, C.y,]
         ys.sort()
         return xs[0],xs[-1],ys[0],ys[-1]
-
-    def renderZBuffer(self):
-        for i in range(len(self.zbuffer)):
-            for j in range(len(self.zbuffer)):
-                if self.zbufer()[i][j]!= -99999:
-                    self.glColor(self.zbufer()[i][j][0],self.zbufer()[i][j][1],self.zbufer()[i][j][2])
-                    self.point(i,j)
-                else:
-                    self.glColor(1,1,1)
-                    self.point(i,j)
 
 
     def triangle(self,A,B,C):
@@ -335,61 +302,11 @@ class Renderer(object):
                     continue
                 z = A.z * w+B.z*v+C.z*u
                 try:
-                    if z> self.zbuffer[x][y]:
+                    if z> self.zbuffer[y][x]:
                         self.point(x,y)
-                        self.zbuffer[x][y] =z
+                        self.zbuffer[y][x] =z
                 except:
                     pass
-
-    '''def triangle(self, A,B,C):
-
-        if A.y > B.y:
-            A,B = B,A
-        if A.y > C.y:
-            A,C = C,A
-        if B.y > C.y:
-            B,C = C,B
-
-        dx_ac = C.x- A.x
-        dy_ac = C.y - A.y
-
-        if dy_ac == 0:
-            return
-        mi_ac = dx_ac/dy_ac
-
-        dx_ab = B.x- A.x
-        dy_ab = B.y - A.y
-
-        if dy_ab !=0:
-            mi_ab = dx_ab/dy_ab
-
-
-
-            for y in range(A.y, B.y+1):
-                xi = round(A.x - mi_ac*(A.y-y))
-                xf = round(A.x - mi_ab*(A.y-y))
-
-                if xf<xi:
-                    xi,xf = xf,xi
-                for x in range(xi,xf+1):
-                    self.point(x,y)
-
-        dx_bc = C.x- B.x
-        dy_bc = C.y - B.y
-
-        if dy_bc == 0:
-            return
-        mi_bc = dx_bc/dy_bc
-
-        for y in range(B.y, C.y+1):
-            xi = round(A.x-mi_ac*(A.y-y))
-            xf = round(B.x-mi_bc*(B.y-y))
-
-            if xf< xi:
-                xi,xf = xf,xi
-            for x in range(xi, xf+1):
-                self.point(x,y)'''
-
 
     def glFinish(self, filename):
         #bw means binary write
@@ -418,5 +335,53 @@ class Renderer(object):
         for y in range(self.height):
             for x in range(self.width):
                 f.write(self.framebuffer[y][x])
+
+        f.close()
+
+    def glFinish_ZBUFFER(self, filename):
+        #bw means binary write
+        f = open(filename, 'bw')
+        #file header
+        f.write(char('B'))
+        f.write(char('M'))
+        f.write(dword(14+40+ 3*(self.width*self.height)))
+        f.write(dword(0))
+        f.write(dword(14+40))
+
+        #info header
+        f.write(dword(40))
+        f.write(dword(self.width))
+        f.write(dword(self.height))
+        f.write(word(1))
+        f.write(word(24))
+        f.write(dword(0))
+        f.write(dword(3*(self.width*self.height)))
+        f.write(dword(0))
+        f.write(dword(0))
+        f.write(dword(0))
+        f.write(dword(0))
+
+        z_min = float('inf')
+        z_max = -float('inf')
+
+        for x in range(self.height):
+            for y in range(self.width):
+                if self.zbuffer[x][y] != -float('inf'):
+                    if self.zbuffer[x][y] > z_max:
+                        z_max = self.zbuffer[x][y]
+
+                    if self.zbuffer[x][y] < z_min:
+                        z_min = self.zbuffer[x][y]
+
+        for x in range(self.height):
+            for y in range(self.width):
+                z_value = self.zbuffer[x][y]
+
+                if z_value == -float('inf'):
+                    z_value = z_min
+
+                z_value = round(((z_value - z_min) / (z_max - z_min)) * 255)
+                z_color = color(z_value, z_value, z_value)
+                f.write(z_color)
 
         f.close()
