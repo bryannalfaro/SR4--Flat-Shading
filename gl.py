@@ -19,10 +19,7 @@ def dword(d):
 
 #setting the function to get color with bytes
 def color(r,g,b):
-    try:
         return bytes([b,g,r])
-    except:
-        return bytes([round(b/255),round(g/255),round(r/255)])
 
 BLACK = color(0,0,0)
 WHITE = color(255,255,255)
@@ -49,16 +46,32 @@ def norm(v0):
 def dot(v0,v1):
     return(v0.x*v1.x + v0.y*v1.y + v0.z*v1.z)
 
+def barycentric(A,B,C,P):
+        cx,cy,cz = cross(V3(B.x-A.x,C.x-A.x,A.x-P.x),V3(B.y-A.y,C.y-A.y,A.y-P.y))
+        if cz ==0:
+            return -1,-1,-1
+
+        u = cx/cz
+        v = cy/cz
+        w = 1-(cx+cy)/cz
+
+        return w,v,u
+
+def bbox(A,B,C):
+    xs = [A.x, B.x, C.x,]
+    xs.sort()
+    ys = [A.y, B.y, C.y,]
+    ys.sort()
+    return xs[0],xs[-1],ys[0],ys[-1]
+
 class Renderer(object):
     def __init__(self):
         self.default_color = color(0,0,139)
         self.cl_color = BLACK
-        self.light = norm(V3(0,0,1))
+
 
     def point(self, x, y):
         self.framebuffer[y][x] =self.default_color
-
-
 
     def glInit(self):
         pass
@@ -88,7 +101,11 @@ class Renderer(object):
 
 
     def glClearColor(self, r,g,b):
-        self.cl_color = color(int(r*255),int(g*255),int(b*255))
+        if(r<=1 and g<=1 and b<=1):
+            self.cl_color = color(int(r*255),int(g*255),int(b*255))
+        else:
+            self.cl_color = color(r,g,b)
+
         self.glClear()
 
     def glVertex(self,x,y):
@@ -99,7 +116,10 @@ class Renderer(object):
 
     #change color of vertex
     def glColor(self, r,g,b):
-        self.default_color = color(int(r*255),int(g*255),int(b*255))
+        if(r<=1 and g<=1 and b<=1):
+            self.default_color = color(int(r*255),int(g*255),int(b*255))
+        else:
+            self.default_color = color(r,g,b)
 
     #Using class implementation
     #REESCRIBIR
@@ -169,6 +189,7 @@ class Renderer(object):
 
     def load(self, filename, movement, scale):
         model = Obj(filename)
+        light = norm(V3(2,3,1))
         for face in (model.faces):
             vcount  = len(face)
 
@@ -184,10 +205,10 @@ class Renderer(object):
                 normal = norm(cross(
                     sub(B,A),
                     sub(C,A)))
-                intensity = dot(normal, self.light)
+                intensity = dot(normal, light)
                 grey = round(255*intensity)
-                if intensity < 0: grey = 0
-                self.glColor(grey,grey,grey)
+                if intensity < 0: grey =0
+                self.glColor(grey/255,(grey/255),(grey/255))
                 self.triangle(A,B,C)
             elif vcount == 4:
                 f1 = face[0][0]-1
@@ -203,27 +224,14 @@ class Renderer(object):
                 normal = norm(cross(
                     sub(A,B),
                     sub(B,C)))
-                intensity = dot(normal, self.light)
+                intensity = dot(normal, light)
                 grey = round(255*intensity)
                 if intensity < 0: grey = 0
-                self.glColor(grey,grey,grey)
 
+                self.glColor(grey/255,(grey/255),(grey/255))
 
                 self.triangle(A,B,C)
                 self.triangle(A,C,D)
-            '''for j in range(vcount):
-                f1 = face[j][0]
-                f2 = face[(j+1)%vcount][0]
-
-                v1  = model.vertices[f1-1]
-                v2 = model.vertices[f2-1]
-
-                x1 = round(((v1[0]+movement[0])*scale[0]))
-                y1 = round(((v1[1]+movement[1])*scale[1]))
-                x2 = round(((v2[0]+movement[0])*scale[0]))
-                y2 = round(((v2[1]+movement[1])*scale[1]))
-
-                self.line(x1,y1,x2,y2)'''
 
     def fill(self):
         bandera = False
@@ -272,37 +280,20 @@ class Renderer(object):
         self.line(B,C)
         self.line(C,A)
 
-    def barycentric(self,A,B,C,P):
-        cx,cy,cz = cross(V3(B.x-A.x,C.x-A.x,A.x-P.x),V3(B.y-A.y,C.y-A.y,A.y-P.y))
-        if cz ==0:
-            return -1,-1,-1
-
-        u = cx/cz
-        v = cy/cz
-        w = 1-(cx+cy)/cz
-
-        return w,v,u
-
-    def bbox(self,A,B,C):
-        xs = [A.x, B.x, C.x,]
-        xs.sort()
-        ys = [A.y, B.y, C.y,]
-        ys.sort()
-        return xs[0],xs[-1],ys[0],ys[-1]
-
 
     def triangle(self,A,B,C):
-        xmin,xmax,ymin,ymax = self.bbox(A,B,C)
+        xmin,xmax,ymin,ymax = bbox(A,B,C)
 
         for x in range(xmin,xmax+1):
             for y in range(ymin,ymax+1):
                 P = V2(x,y)
-                w,v,u = self.barycentric(A,B,C,P)
+                w,v,u = barycentric(A,B,C,P)
                 if w<0 or v<0 or u<0:
                     continue
                 z = A.z * w+B.z*v+C.z*u
                 try:
                     if z> self.zbuffer[y][x]:
+
                         self.point(x,y)
                         self.zbuffer[y][x] =z
                 except:
@@ -381,6 +372,7 @@ class Renderer(object):
                     z_value = z_min
 
                 z_value = round(((z_value - z_min) / (z_max - z_min)) * 255)
+
                 z_color = color(z_value, z_value, z_value)
                 f.write(z_color)
 
