@@ -1,21 +1,11 @@
-import struct
-import random
+
 from obj import Obj
 from collections import namedtuple
+from Funciones.characters import *
+from Funciones.math import *
 
 V2 = namedtuple("Point2D",['x','y'])
 V3 = namedtuple("Point3D",['x','y','z'])
-
-def char(c):
-    return struct.pack('=c',c.encode('ascii'))
-
-def word(w):
-    #short
-    return struct.pack('=h',w)
-
-def dword(d):
-    #long
-    return struct.pack('=l',d)
 
 #setting the function to get color with bytes
 def color(r,g,b):
@@ -23,28 +13,6 @@ def color(r,g,b):
 
 BLACK = color(0,0,0)
 WHITE = color(255,255,255)
-
-def cross(v0,v1):
-        cx = v0.y*v1.z-v0.z*v1.y
-        cy = v0.z*v1.x-v0.x*v1.z
-        cz = v0.x*v1.y-v0.y*v1.x
-
-        return V3(cx,cy,cz)
-
-def sub(v0,v1):
-    return V3(v0.x-v1.x,v0.y-v1.y,v0.z-v1.z)
-
-def length(v0):
-    return (v0.x**2+v0.y**2+v0.z**2)**0.5
-
-def norm(v0):
-    l = length(v0)
-    if l == 0:
-        return V3(0,0,0)
-    return V3(v0.x/l, v0.y/l, v0.z/l)
-
-def dot(v0,v1):
-    return(v0.x*v1.x + v0.y*v1.y + v0.z*v1.z)
 
 def barycentric(A,B,C,P):
         cx,cy,cz = cross(V3(B.x-A.x,C.x-A.x,A.x-P.x),V3(B.y-A.y,C.y-A.y,A.y-P.y))
@@ -189,7 +157,7 @@ class Renderer(object):
 
     def load(self, filename, movement, scale):
         model = Obj(filename)
-        light = norm(V3(2,3,1))
+        light = norm(V3(0,0,1))
         for face in (model.faces):
             vcount  = len(face)
 
@@ -202,9 +170,7 @@ class Renderer(object):
                 B = self.transform(model.vertices[f2], movement, scale)
                 C = self.transform(model.vertices[f3], movement, scale)
 
-                normal = norm(cross(
-                    sub(B,A),
-                    sub(C,A)))
+                normal = norm(cross(sub(B,A),sub(C,A)))
                 intensity = dot(normal, light)
                 grey = round(255*intensity)
                 if intensity < 0: grey =0
@@ -221,9 +187,7 @@ class Renderer(object):
                 C = self.transform(model.vertices[f3], movement, scale)
                 D = self.transform(model.vertices[f4], movement, scale)
 
-                normal = norm(cross(
-                    sub(A,B),
-                    sub(B,C)))
+                normal = norm(cross(sub(A,B),sub(B,C)))
                 intensity = dot(normal, light)
                 grey = round(255*intensity)
                 if intensity < 0: grey = 0
