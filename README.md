@@ -1,2 +1,7 @@
 # SR4--Flat-Shading
-![alt text](https://github.com/[bryannalfaro]/[SR4--Flat-Shading]/blob/[main]/salidas/output1.bmp?raw=true)
+
+##Render with image
+![alt text](https://github.com/bryannalfaro/SR4--Flat-Shading/blob/main/salidas/output1.bmp?raw=true)
+
+##Rendering Z-Buffer
+![alt text](https://github.com/bryannalfaro/SR4--Flat-Shading/blob/main/salidas/output2.bmp?raw=true)
